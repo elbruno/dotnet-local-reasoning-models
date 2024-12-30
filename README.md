@@ -2,7 +2,7 @@
 
 This sample Blazor application demonstrates how to integrate and run local reasoning models using [Ollama](https://ollama.com/) in a .NET application. The application compares the outputs of a standard model, and two different reasoning models when solving mathematical problems.
 
-![Sample app running](./images/01AppRunning.png)
+![Sample app running animation](./images/01AppRunning.png)
 
 ## Reasoning Models
 
@@ -53,6 +53,8 @@ To run this sample, you will need:
 4. **Run the Application**
 
 5. **Access the Application**: Open your web browser and navigate to `https://localhost:5001` or the URL provided in the console output.
+
+  ![Sample app running](./images/05RunningAppSample.gif)
 
 ## Application Functionality
 
