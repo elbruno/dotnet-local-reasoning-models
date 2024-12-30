@@ -2,6 +2,8 @@
 
 This sample Blazor application demonstrates how to integrate and run local reasoning models using [Ollama](https://ollama.com/) in a .NET application. The application compares the outputs of a standard model, and two different reasoning models when solving mathematical problems.
 
+![Sample app running](./images/01AppRunning.png)
+
 ## Reasoning Models
 
 Reasoning models are designed to enhance the logical reasoning capabilities of AI models. Unlike standard Large Language Models (LLMs) like GPT-4, which are trained on extensive general text data, reasoning models focus on logical deduction, mathematical computations, and understanding complex relationships.
