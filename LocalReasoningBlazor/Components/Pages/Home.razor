@@ -1,0 +1,205 @@
+﻿@page "/"
+@using Microsoft.Extensions.AI
+@attribute [StreamRendering]
+@rendermode InteractiveServer
+
+<PageTitle>🦙 .NET and local reasoning models 💯</PageTitle>
+
+<div class="net-brand-page">
+    <h1 class="net-brand-title">🦙 .NET and local reasoning models 💯</h1>
+
+    @if (showNotification)
+    {
+        <div class="alert alert-success" role="alert">
+            @notificationMessage
+            <br />
+            <small>@elapsedTimeMessage</small>
+        </div>
+    }
+
+    <table class="table table-bordered table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th style="width: 30%;">
+                    <div style="display: flex; justify-self; align-items: flex-end;">
+                        <button class="btn btn-sm btn-primary" @onclick="StartModelLlama">Start</button>
+                        <span style="margin-left: 10px;">Model: llama3.2-vision</span>
+                    </div>
+                </th>
+                <th style="width: 35%;">
+                    <div style="display: flex; justify-self; align-items: flex-end;">
+                        <button class="btn btn-sm btn-primary" @onclick="StartModelMarco">Start</button>
+                        <span style="margin-left: 10px;">Model: marco-o1</span>
+                    </div>
+                </th>
+                <th style="width: 35%;">
+                    <div style="display: flex; justify-self; align-items: flex-end;">
+                        <button class="btn btn-sm btn-primary" @onclick="StartModelQwq">Start</button>
+                        <span style="margin-left: 10px;">Model: qwq</span>
+                    </div>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td colspan="3">Problem: @promptMathSimple</td>
+            </tr>
+            <tr>
+                <td><small>@llamaSimpleProblemResponse</small></td>
+                <td><small>@marcoSimpleProblemResponse</small></td>
+                <td><small>@qwqSimpleProblemResponse</small></td>
+            </tr>
+            <tr>
+                <td colspan="3">Problem: @promptMathComplex</td>
+            </tr>
+            <tr>
+                <td><small>@llamaComplexProblemResponse</small></td>
+                <td><small>@marcoComplexProblemResponse</small></td>
+                <td><small>@qwqComplexProblemResponse</small></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private string llamaSimpleProblemResponse = "";
+    private string llamaComplexProblemResponse = "";
+    private string marcoSimpleProblemResponse = "";
+    private string marcoComplexProblemResponse = "";
+    private string qwqSimpleProblemResponse = "";
+    private string qwqComplexProblemResponse = "";
+    private OllamaChatClient chat = null;
+    private string promptMathSimple = "Please solve 2 + 3";
+    private string promptMathComplex = "Which is bigger, 9.9 or 9.11?";
+    private bool showNotification = false;
+    private string notificationMessage = "";
+    private string elapsedTimeMessage = "";
+    private bool isProcessing = false;
+    private DateTime startTime;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    async Task StartModelLlama() 
+    {
+        await StartModel("llama3.2-vision");
+    }
+
+    async Task StartModelMarco() 
+    {
+        await StartModel("marco-o1");
+    }
+
+    async Task StartModelQwq()
+    {
+        await StartModel("qwq");
+    }
+
+    async Task StartModel(string modelId)
+    {
+        isProcessing = true;
+        startTime = DateTime.Now;
+        _ = UpdateNotificationTime();
+        ShowNotification($"Solving [{promptMathSimple}] with [{modelId}]...");
+        await ProcessPromptAsync(modelId, promptMathSimple, response => UpdateResponse(modelId, response, true));
+        ShowNotification($"Solving [{promptMathComplex}] with [{modelId}]...");
+        await ProcessPromptAsync(modelId, promptMathComplex, response => UpdateResponse(modelId, response, false));
+        ShowNotification("Processing completed!");
+        isProcessing = false;
+        await Task.Delay(3000);
+        if (!isProcessing)
+        {
+            showNotification = false;
+            StateHasChanged();
+        }
+    }
+
+    async Task ProcessPromptAsync(string modelId, string prompt, Action<string> updateResponse)
+    {
+        chat = new OllamaChatClient(new Uri("http://localhost:11434/"), modelId);
+        var result = chat.CompleteStreamingAsync(prompt);
+        var live_response = string.Empty;
+        await foreach (var message in result)
+        {
+            live_response += message.Text;
+            updateResponse(live_response);
+            StateHasChanged();
+        }
+        StateHasChanged();
+    }
+
+    private void UpdateResponse(string modelId, string response, bool isSimple)
+    {
+        switch (modelId)
+        {
+            case "llama3.2-vision":
+                if (isSimple) llamaSimpleProblemResponse = response;
+                else llamaComplexProblemResponse = response;
+                break;
+            case "marco-o1":
+                if (isSimple) marcoSimpleProblemResponse = response;
+                else marcoComplexProblemResponse = response;
+                break;
+            case "qwq":
+                if (isSimple) qwqSimpleProblemResponse = response;
+                else qwqComplexProblemResponse = response;
+                break;
+        }
+    }
+
+    private void ShowNotification(string message)
+    {
+        notificationMessage = message;
+        showNotification = true;
+        StateHasChanged();
+    }
+
+    private async Task UpdateNotificationTime()
+    {
+        while (isProcessing)
+        {
+            var elapsedTime = DateTime.Now - startTime;
+            elapsedTimeMessage = $"Elapsed time: {elapsedTime.Hours:D2}:{elapsedTime.Minutes:D2}:{elapsedTime.Seconds:D2}";
+            StateHasChanged();
+            await Task.Delay(1000);
+        }
+    }
+}
+
+<style>
+    .net-brand-page {
+        background-color: #F3F2F1; /* Light background color */
+        padding: 20px;
+        border-radius: 10px;
+    }
+
+    .net-brand-title {
+        background-color: #512BD4; /* .NET purple color */
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+    }
+
+    .table {
+        background-color: white;
+        border: 1px solid #ddd;
+    }
+
+    .thead-dark th {
+        background-color: #343a40;
+        color: white;
+    }
+
+    .btn-primary {
+        background-color: #512BD4; /* .NET purple color */
+        border-color: #512BD4;
+    }
+</style>
+
+
+
+
+
