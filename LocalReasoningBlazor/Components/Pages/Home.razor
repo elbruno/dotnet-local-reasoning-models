@@ -1,4 +1,6 @@
 ﻿@page "/"
+@using Azure
+@using Azure.AI.Inference
 @using Microsoft.Extensions.AI
 @attribute [StreamRendering]
 @rendermode InteractiveServer
@@ -28,6 +30,12 @@
                 </th>
                 <th style="width: 35%;">
                     <div style="display: flex; justify-self; align-items: flex-end;">
+                        <button class="btn btn-sm btn-primary" @onclick="StartModelo1mini">Start</button>
+                        <span style="margin-left: 10px;">Model: o1-mini</span>
+                    </div>
+                </th>
+                <th style="width: 35%;">
+                    <div style="display: flex; justify-self; align-items: flex-end;">
                         <button class="btn btn-sm btn-primary" @onclick="StartModelMarco">Start</button>
                         <span style="margin-left: 10px;">Model: marco-o1</span>
                     </div>
@@ -42,20 +50,31 @@
         </thead>
         <tbody>
             <tr>
-                <td colspan="3">Problem: @promptMathSimple</td>
+                <td colspan="4">Problem: @promptMathSimple</td>
             </tr>
             <tr>
                 <td><small>@llamaSimpleProblemResponse</small></td>
+                <td><small>@o1miniSimpleProblemResponse</small></td>
                 <td><small>@marcoSimpleProblemResponse</small></td>
                 <td><small>@qwqSimpleProblemResponse</small></td>
             </tr>
             <tr>
-                <td colspan="3">Problem: @promptMathComplex</td>
+                <td colspan="4">Problem: @promptMathComplex</td>
             </tr>
             <tr>
                 <td><small>@llamaComplexProblemResponse</small></td>
+                <td><small>@o1miniComplexProblemResponse</small></td>
                 <td><small>@marcoComplexProblemResponse</small></td>
                 <td><small>@qwqComplexProblemResponse</small></td>
+            </tr>
+            <tr>
+                <td colspan="4">Problem: @promptMathComplexDetailed</td>
+            </tr>
+            <tr>
+                <td><small>@llamaComplexDetailedProblemResponse</small></td>
+                <td><small>@o1miniComplexDetailedProblemResponse</small></td>
+                <td><small>@marcoComplexDetailedProblemResponse</small></td>
+                <td><small>@qwqComplexDetailedProblemResponse</small></td>
             </tr>
         </tbody>
     </table>
@@ -64,13 +83,20 @@
 @code {
     private string llamaSimpleProblemResponse = "";
     private string llamaComplexProblemResponse = "";
+    private string llamaComplexDetailedProblemResponse = "";
+    private string o1miniSimpleProblemResponse = "";
+    private string o1miniComplexProblemResponse = "";
+    private string o1miniComplexDetailedProblemResponse = "";
     private string marcoSimpleProblemResponse = "";
     private string marcoComplexProblemResponse = "";
+    private string marcoComplexDetailedProblemResponse = "";
     private string qwqSimpleProblemResponse = "";
     private string qwqComplexProblemResponse = "";
+    private string qwqComplexDetailedProblemResponse = "";
     private OllamaChatClient chat = null;
     private string promptMathSimple = "Please solve 2 + 3";
     private string promptMathComplex = "Which is bigger, 9.9 or 9.11?";
+    private string promptMathComplexDetailed = "Which number is bigger, [9.9] or [9.11]?";
     private bool showNotification = false;
     private string notificationMessage = "";
     private string elapsedTimeMessage = "";
@@ -82,12 +108,17 @@
         base.OnInitialized();
     }
 
-    async Task StartModelLlama() 
+    async Task StartModelLlama()
     {
         await StartModel("llama3.2-vision");
     }
 
-    async Task StartModelMarco() 
+    async Task StartModelo1mini()
+    {
+        await StartModel("o1-mini");
+    }
+
+    async Task StartModelMarco()
     {
         await StartModel("marco-o1");
     }
@@ -103,9 +134,11 @@
         startTime = DateTime.Now;
         _ = UpdateNotificationTime();
         ShowNotification($"Solving [{promptMathSimple}] with [{modelId}]...");
-        await ProcessPromptAsync(modelId, promptMathSimple, response => UpdateResponse(modelId, response, true));
+        await ProcessPromptAsync(modelId, promptMathSimple, response => UpdateResponse(modelId, response, "simple"));
         ShowNotification($"Solving [{promptMathComplex}] with [{modelId}]...");
-        await ProcessPromptAsync(modelId, promptMathComplex, response => UpdateResponse(modelId, response, false));
+        await ProcessPromptAsync(modelId, promptMathComplex, response => UpdateResponse(modelId, response, "complex"));
+        ShowNotification($"Solving [{promptMathComplexDetailed}] with [{modelId}]...");
+        await ProcessPromptAsync(modelId, promptMathComplexDetailed, response => UpdateResponse(modelId, response, "complexDetailed"));
         ShowNotification("Processing completed!");
         isProcessing = false;
         await Task.Delay(3000);
@@ -118,33 +151,78 @@
 
     async Task ProcessPromptAsync(string modelId, string prompt, Action<string> updateResponse)
     {
-        chat = new OllamaChatClient(new Uri("http://localhost:11434/"), modelId);
-        var result = chat.CompleteStreamingAsync(prompt);
-        var live_response = string.Empty;
-        await foreach (var message in result)
+        IChatClient chat = null;
+
+        if (modelId == "o1-mini")
         {
-            live_response += message.Text;
-            updateResponse(live_response);
+            // get the GitHub token from the environment variables or user secrets
+            // the GitHub token is used to authenticate the GitHub Models API
+            // when the project is running in CodeSpaces
+            var github_token = System.Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+            if (string.IsNullOrEmpty(github_token))
+            {
+                var config = new ConfigurationBuilder().AddUserSecrets<Program>().Build();
+                github_token = config["GITHUB_TOKEN"];
+            }
+
+            var credential = new AzureKeyCredential(github_token);
+            var client = new ChatCompletionsClient(
+                new Uri("https://models.inference.ai.azure.com"),
+                credential,
+                new ChatCompletionsClientOptions());
+
+            var requestOptions = new ChatCompletionsOptions()
+                {
+                    Messages =
+                    {
+                        new ChatRequestUserMessage(prompt),
+                    },
+                    Model = modelId
+                };
+
+            var response = client.Complete(requestOptions);
+            updateResponse(response.Value.Choices[0].Message.Content);
             StateHasChanged();
+        }
+        else
+        {
+            chat = new OllamaChatClient(new Uri("http://localhost:11434/"), modelId);
+
+            var result = chat.CompleteStreamingAsync(prompt);
+            var live_response = string.Empty;
+            await foreach (var message in result)
+            {
+                live_response += message.Text;
+                updateResponse(live_response);
+                StateHasChanged();
+            }
         }
         StateHasChanged();
     }
 
-    private void UpdateResponse(string modelId, string response, bool isSimple)
+    private void UpdateResponse(string modelId, string response, string problemType)
     {
         switch (modelId)
         {
             case "llama3.2-vision":
-                if (isSimple) llamaSimpleProblemResponse = response;
-                else llamaComplexProblemResponse = response;
+                if (problemType == "simple") llamaSimpleProblemResponse = response;
+                else if (problemType == "complex") llamaComplexProblemResponse = response;
+                else if (problemType == "complexDetailed") llamaComplexDetailedProblemResponse = response;
+                break;
+            case "o1-mini":
+                if (problemType == "simple") o1miniSimpleProblemResponse = response;
+                else if (problemType == "complex") o1miniComplexProblemResponse = response;
+                else if (problemType == "complexDetailed") o1miniComplexDetailedProblemResponse = response;
                 break;
             case "marco-o1":
-                if (isSimple) marcoSimpleProblemResponse = response;
-                else marcoComplexProblemResponse = response;
+                if (problemType == "simple") marcoSimpleProblemResponse = response;
+                else if (problemType == "complex") marcoComplexProblemResponse = response;
+                else if (problemType == "complexDetailed") marcoComplexDetailedProblemResponse = response;
                 break;
             case "qwq":
-                if (isSimple) qwqSimpleProblemResponse = response;
-                else qwqComplexProblemResponse = response;
+                if (problemType == "simple") qwqSimpleProblemResponse = response;
+                else if (problemType == "complex") qwqComplexProblemResponse = response;
+                else if (problemType == "complexDetailed") qwqComplexDetailedProblemResponse = response;
                 break;
         }
     }
