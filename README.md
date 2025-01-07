@@ -2,6 +2,8 @@
 
 This sample Blazor application demonstrates how to integrate and run local reasoning models using [Ollama](https://ollama.com/) in a .NET application. The application compares the outputs of a standard model, and two different reasoning models when solving mathematical problems.
 
+To get a quick overview of how to run local models with Ollama and understand the reasoning models, [watch this video explaining the repository components, models and how to run.](https://www.youtube.com/watch?v=ZdA2lWB61bs)
+
 ![Sample app running animation](./images/05RunningAppSample.gif)
 
 ## Reasoning Models
