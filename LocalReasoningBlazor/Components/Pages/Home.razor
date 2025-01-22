@@ -24,14 +24,8 @@
             <tr>
                 <th style="width: 30%;">
                     <div style="display: flex; justify-self; align-items: flex-end;">
-                        <button class="btn btn-sm btn-primary" @onclick="StartModelLlama">Start</button>
-                        <span style="margin-left: 10px;">Model: llama3.2-vision</span>
-                    </div>
-                </th>
-                <th style="width: 35%;">
-                    <div style="display: flex; justify-self; align-items: flex-end;">
-                        <button class="btn btn-sm btn-primary" @onclick="StartModelo1mini">Start</button>
-                        <span style="margin-left: 10px;">Model: o1-mini</span>
+                        <button class="btn btn-sm btn-primary" @onclick="StartModelTest1">Start</button>
+                        <span style="margin-left: 10px;">Model: @testModel1Name</span>
                     </div>
                 </th>
                 <th style="width: 35%;">
@@ -50,29 +44,26 @@
         </thead>
         <tbody>
             <tr>
-                <td colspan="4">Problem: @promptMathSimple</td>
+                <td colspan="3">Problem: @promptMathSimple</td>
             </tr>
             <tr>
-                <td><small>@llamaSimpleProblemResponse</small></td>
-                <td><small>@o1miniSimpleProblemResponse</small></td>
+                <td><small>@testModel1SimpleProblemResponse</small></td>
                 <td><small>@testModel2SimpleProblemResponse</small></td>
                 <td><small>@testModel3SimpleProblemResponse</small></td>
             </tr>
             <tr>
-                <td colspan="4">Problem: @promptMathComplex</td>
+                <td colspan="3">Problem: @promptMathComplex</td>
             </tr>
             <tr>
-                <td><small>@llamaComplexProblemResponse</small></td>
-                <td><small>@o1miniComplexProblemResponse</small></td>
+                <td><small>@testModel1ComplexProblemResponse</small></td>
                 <td><small>@testModel2ComplexProblemResponse</small></td>
                 <td><small>@testModel3ComplexProblemResponse</small></td>
             </tr>
             <tr>
-                <td colspan="4">Problem: @promptMathComplexDetailed</td>
+                <td colspan="3">Problem: @promptMathComplexDetailed</td>
             </tr>
             <tr>
-                <td><small>@llamaComplexDetailedProblemResponse</small></td>
-                <td><small>@o1miniComplexDetailedProblemResponse</small></td>
+                <td><small>@testModel1ComplexDetailedProblemResponse</small></td>
                 <td><small>@testModel2ComplexDetailedProblemResponse</small></td>
                 <td><small>@testModel3ComplexDetailedProblemResponse</small></td>
             </tr>
@@ -81,12 +72,10 @@
 </div>
 
 @code {
-    private string llamaSimpleProblemResponse = "";
-    private string llamaComplexProblemResponse = "";
-    private string llamaComplexDetailedProblemResponse = "";
-    private string o1miniSimpleProblemResponse = "";
-    private string o1miniComplexProblemResponse = "";
-    private string o1miniComplexDetailedProblemResponse = "";
+    private const string testModel1Name = "phi4";
+    private string testModel1SimpleProblemResponse = "";
+    private string testModel1ComplexProblemResponse = "";
+    private string testModel1ComplexDetailedProblemResponse = "";
     private const string testModel2Name = "marco-o1";
     private string testModel2SimpleProblemResponse = "";
     private string testModel2ComplexProblemResponse = "";
@@ -110,14 +99,9 @@
         base.OnInitialized();
     }
 
-    async Task StartModelLlama()
+    async Task StartModelTest1()
     {
-        await StartModel("llama3.2-vision");
-    }
-
-    async Task StartModelo1mini()
-    {
-        await StartModel("o1-mini");
+        await StartModel(testModel1Name);
     }
 
     async Task StartModelTest2()
@@ -154,50 +138,14 @@
     async Task ProcessPromptAsync(string modelId, string prompt, Action<string> updateResponse)
     {
         IChatClient chat = null;
-
-        if (modelId == "o1-mini")
+        chat = new OllamaChatClient(new Uri("http://localhost:11434/"), modelId);
+        var result = chat.CompleteStreamingAsync(prompt);
+        var live_response = string.Empty;
+        await foreach (var message in result)
         {
-            // get the GitHub token from the environment variables or user secrets
-            // the GitHub token is used to authenticate the GitHub Models API
-            // when the project is running in CodeSpaces
-            var github_token = System.Environment.GetEnvironmentVariable("GITHUB_TOKEN");
-            if (string.IsNullOrEmpty(github_token))
-            {
-                var config = new ConfigurationBuilder().AddUserSecrets<Program>().Build();
-                github_token = config["GITHUB_TOKEN"];
-            }
-
-            var credential = new AzureKeyCredential(github_token);
-            var client = new ChatCompletionsClient(
-                new Uri("https://models.inference.ai.azure.com"),
-                credential,
-                new ChatCompletionsClientOptions());
-
-            var requestOptions = new ChatCompletionsOptions()
-                {
-                    Messages =
-                    {
-                        new ChatRequestUserMessage(prompt),
-                    },
-                    Model = modelId
-                };
-
-            var response = client.Complete(requestOptions);
-            updateResponse(response.Value.Choices[0].Message.Content);
+            live_response += message.Text;
+            updateResponse(live_response);
             StateHasChanged();
-        }
-        else
-        {
-            chat = new OllamaChatClient(new Uri("http://localhost:11434/"), modelId);
-
-            var result = chat.CompleteStreamingAsync(prompt);
-            var live_response = string.Empty;
-            await foreach (var message in result)
-            {
-                live_response += message.Text;
-                updateResponse(live_response);
-                StateHasChanged();
-            }
         }
         StateHasChanged();
     }
@@ -206,15 +154,10 @@
     {
         switch (modelId)
         {
-            case "llama3.2-vision":
-                if (problemType == "simple") llamaSimpleProblemResponse = response;
-                else if (problemType == "complex") llamaComplexProblemResponse = response;
-                else if (problemType == "complexDetailed") llamaComplexDetailedProblemResponse = response;
-                break;
-            case "o1-mini":
-                if (problemType == "simple") o1miniSimpleProblemResponse = response;
-                else if (problemType == "complex") o1miniComplexProblemResponse = response;
-                else if (problemType == "complexDetailed") o1miniComplexDetailedProblemResponse = response;
+            case testModel1Name:
+                if (problemType == "simple") testModel1SimpleProblemResponse = response;
+                else if (problemType == "complex") testModel1ComplexProblemResponse = response;
+                else if (problemType == "complexDetailed") testModel1ComplexDetailedProblemResponse = response;
                 break;
             case testModel2Name:
                 if (problemType == "simple") testModel2SimpleProblemResponse = response;
