@@ -36,14 +36,14 @@
                 </th>
                 <th style="width: 35%;">
                     <div style="display: flex; justify-self; align-items: flex-end;">
-                        <button class="btn btn-sm btn-primary" @onclick="StartModelMarco">Start</button>
-                        <span style="margin-left: 10px;">Model: marco-o1</span>
+                        <button class="btn btn-sm btn-primary" @onclick="StartModelTest2">Start</button>
+                        <span style="margin-left: 10px;">Model: @testModel2Name</span>
                     </div>
                 </th>
                 <th style="width: 35%;">
                     <div style="display: flex; justify-self; align-items: flex-end;">
-                        <button class="btn btn-sm btn-primary" @onclick="StartModelQwq">Start</button>
-                        <span style="margin-left: 10px;">Model: qwq</span>
+                        <button class="btn btn-sm btn-primary" @onclick="StartModelTest3">Start</button>
+                        <span style="margin-left: 10px;">Model: @testModel3Name</span>
                     </div>
                 </th>
             </tr>
@@ -55,8 +55,8 @@
             <tr>
                 <td><small>@llamaSimpleProblemResponse</small></td>
                 <td><small>@o1miniSimpleProblemResponse</small></td>
-                <td><small>@marcoSimpleProblemResponse</small></td>
-                <td><small>@qwqSimpleProblemResponse</small></td>
+                <td><small>@testModel2SimpleProblemResponse</small></td>
+                <td><small>@testModel3SimpleProblemResponse</small></td>
             </tr>
             <tr>
                 <td colspan="4">Problem: @promptMathComplex</td>
@@ -64,8 +64,8 @@
             <tr>
                 <td><small>@llamaComplexProblemResponse</small></td>
                 <td><small>@o1miniComplexProblemResponse</small></td>
-                <td><small>@marcoComplexProblemResponse</small></td>
-                <td><small>@qwqComplexProblemResponse</small></td>
+                <td><small>@testModel2ComplexProblemResponse</small></td>
+                <td><small>@testModel3ComplexProblemResponse</small></td>
             </tr>
             <tr>
                 <td colspan="4">Problem: @promptMathComplexDetailed</td>
@@ -73,8 +73,8 @@
             <tr>
                 <td><small>@llamaComplexDetailedProblemResponse</small></td>
                 <td><small>@o1miniComplexDetailedProblemResponse</small></td>
-                <td><small>@marcoComplexDetailedProblemResponse</small></td>
-                <td><small>@qwqComplexDetailedProblemResponse</small></td>
+                <td><small>@testModel2ComplexDetailedProblemResponse</small></td>
+                <td><small>@testModel3ComplexDetailedProblemResponse</small></td>
             </tr>
         </tbody>
     </table>
@@ -87,12 +87,14 @@
     private string o1miniSimpleProblemResponse = "";
     private string o1miniComplexProblemResponse = "";
     private string o1miniComplexDetailedProblemResponse = "";
-    private string marcoSimpleProblemResponse = "";
-    private string marcoComplexProblemResponse = "";
-    private string marcoComplexDetailedProblemResponse = "";
-    private string qwqSimpleProblemResponse = "";
-    private string qwqComplexProblemResponse = "";
-    private string qwqComplexDetailedProblemResponse = "";
+    private const string testModel2Name = "marco-o1";
+    private string testModel2SimpleProblemResponse = "";
+    private string testModel2ComplexProblemResponse = "";
+    private string testModel2ComplexDetailedProblemResponse = "";
+    private const string testModel3Name = "qwq";
+    private string testModel3SimpleProblemResponse = "";
+    private string testModel3ComplexProblemResponse = "";
+    private string testModel3ComplexDetailedProblemResponse = "";
     private OllamaChatClient chat = null;
     private string promptMathSimple = "Please solve 2 + 3";
     private string promptMathComplex = "Which is bigger, 9.9 or 9.11?";
@@ -118,14 +120,14 @@
         await StartModel("o1-mini");
     }
 
-    async Task StartModelMarco()
+    async Task StartModelTest2()
     {
-        await StartModel("marco-o1");
+        await StartModel(testModel2Name);
     }
 
-    async Task StartModelQwq()
+    async Task StartModelTest3()
     {
-        await StartModel("qwq");
+        await StartModel(testModel3Name);
     }
 
     async Task StartModel(string modelId)
@@ -214,15 +216,15 @@
                 else if (problemType == "complex") o1miniComplexProblemResponse = response;
                 else if (problemType == "complexDetailed") o1miniComplexDetailedProblemResponse = response;
                 break;
-            case "marco-o1":
-                if (problemType == "simple") marcoSimpleProblemResponse = response;
-                else if (problemType == "complex") marcoComplexProblemResponse = response;
-                else if (problemType == "complexDetailed") marcoComplexDetailedProblemResponse = response;
+            case testModel2Name:
+                if (problemType == "simple") testModel2SimpleProblemResponse = response;
+                else if (problemType == "complex") testModel2ComplexProblemResponse = response;
+                else if (problemType == "complexDetailed") testModel2ComplexDetailedProblemResponse = response;
                 break;
-            case "qwq":
-                if (problemType == "simple") qwqSimpleProblemResponse = response;
-                else if (problemType == "complex") qwqComplexProblemResponse = response;
-                else if (problemType == "complexDetailed") qwqComplexDetailedProblemResponse = response;
+            case testModel3Name:
+                if (problemType == "simple") testModel3SimpleProblemResponse = response;
+                else if (problemType == "complex") testModel3ComplexProblemResponse = response;
+                else if (problemType == "complexDetailed") testModel3ComplexDetailedProblemResponse = response;
                 break;
         }
     }
